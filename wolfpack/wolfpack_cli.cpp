@@ -10,6 +10,8 @@
 #include <future>
 #include <nlohmann/json.hpp>
 
+#include "utils.hpp"
+
 template <>
 class fmt::formatter<std::filesystem::path>
 {
@@ -176,18 +178,44 @@ namespace wolfpack
         {
             throw WolfpackError(fmt::format("Parse error of '{}' -> {}", config_stream.str(), ex.what()));
         }
+
+        auto run_command_logged = [verbose](const std::string &command) -> CommandResult
+        {
+            CommandResult result = run_command(command);
+            if (result)
+            {
+                vout << result.output.str() << "\n";
+            }
+            else
+            {
+                std::cerr << result.output.str() << "\n";
+                std::cerr << fmt::format("Shell command '{}' failed with code {}!\n", result.command, result.code);
+            }
+            return result;
+        };
+
+        if (!run_command_logged("git --version"))
+        {
+            throw WolfpackError("Git is not installed!");
+        }
+
+        // run async tasks
     }
 }
 
+#if defined(NDEBUG) || 1
+#define CATCH_EXCEPTIONS
+#endif
+
 auto main(int argc, char **argv) -> int
 {
-#ifdef NDEBUG
+#ifdef CATCH_EXCEPTIONS
     try
     {
 #endif
         wolfpack::run_wolfpack(argc, argv);
         return 0;
-#ifdef NDEBUG
+#ifdef CATCH_EXCEPTIONS
     }
     catch (std::exception &ex)
     {

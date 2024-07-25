@@ -1,6 +1,6 @@
 # wolfpack
 
-Simple and async vcpkg-like package manager for CMake repos.
+Simple async vcpkg-like package manager for CMake C++.
 
 Created to stop me from swearing while using existing C++ package managers.
 
@@ -27,11 +27,13 @@ Create a `wolfpack.json` file next to your project's CMakeLists.txt.
   "version": 1,
   "libs": {
     "fmtlib/fmt": {
-      "tag": "11.0.2" # or "tag":"master"
+      "tag": "11.0.2"
     }
   }
 }
 ```
+
+Tag can also be set to a branch, like 'main' or 'master'.
 
 wolfpack will clone repos to `$HOME/.wolfpack/<author>/<repo>` by default and share them between projects.
 

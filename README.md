@@ -1,6 +1,6 @@
 # wolfpack
 
-NIH simple vcpkg-like package manager for CMake repos.
+Simple and async vcpkg-like package manager for CMake repos.
 
 Created to stop me from swearing while using existing C++ package managers.
 
@@ -20,19 +20,29 @@ TODO
 
 ## Configuration
 
-Create a `wolfpack.yml` or ``wolfpack.yaml` file next to your CMakeLists.txt
+Create a `wolfpack.json` file next to your project's CMakeLists.txt.
 
-```yaml
-- fmtlib/fmt
-  - tag=11.0.2
+```json
+{
+  "version": 1,
+  "libs": {
+    "fmtlib/fmt": {
+      "tag": "11.0.2" # or "tag":"master"
+    }
+  }
+}
 ```
 
-wolfpack will clone repos to `$HOME/.wolfpack/<author>/<repo>` and use them between projects.
+wolfpack will clone repos to `$HOME/.wolfpack/<author>/<repo>` by default and share them between projects.
 
-Finally add to your projects CMakeLists.txt
+Finally, add to your project's CMakeLists.txt.
 
 ```cmake
 add_subdirectory(${WOLF_PACK}/fmtlib/fmt)
+
+# (add_executable or add_library)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE fmt)
 ```
 
 ## Usage
@@ -46,10 +56,10 @@ wpcmake -S . -B build
 If you don't want to use the wrapper, use this instead.
 
 ```sh
-wolfpack . && cmake -DWOLF_PACK="$HOME/.wolfpack" -S . -B build
+wolfpack && cmake -DWOLF_PACK="$HOME/.wolfpack" -S . -B build
 
 # or if you don't want to share dependencies between projects
-wolfpack -DWOLF_PACK=".wolfpack" . && cmake -DWOLF_PACK=".wolfpack" -S . -B build
+wolfpack -o ".wolfpack" && cmake -DWOLF_PACK=".wolfpack" -S . -B build
 ```
 
 ## Limitations

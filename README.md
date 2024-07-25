@@ -1,8 +1,8 @@
 # wolfpack
 
-NIH simple vcpkg-like package manager that downloads CMake repos.
+NIH simple vcpkg-like package manager for CMake repos.
 
-Created to stop me from swearing when using existing C++ package managers.
+Created to stop me from swearing while using existing C++ package managers.
 
 ## Install
 
@@ -37,16 +37,19 @@ add_subdirectory(${WOLF_PACK}/fmtlib/fmt)
 
 ## Usage
 
-Use `wcmake` that wraps `cmake`.
+TODO: Use `wcmake` that wraps `cmake`.
 
 ```sh
-wcmake -S . -B build
+wpcmake -S . -B build
 ```
 
 If you don't want to use the wrapper, use this instead.
 
 ```sh
-wolfpack && cmake -DWOLF_PACK="$HOME/.wolfpack" -S . -B build
+wolfpack . && cmake -DWOLF_PACK="$HOME/.wolfpack" -S . -B build
+
+# or if you don't want to share dependencies between projects
+wolfpack -DWOLF_PACK=".wolfpack" . && cmake -DWOLF_PACK=".wolfpack" -S . -B build
 ```
 
 ## Limitations
@@ -54,3 +57,4 @@ wolfpack && cmake -DWOLF_PACK="$HOME/.wolfpack" -S . -B build
 - Source builds only (cmake will get slow when using lots of dependencies)
 - Dependencies must use CMake.
 - Repos must be hosted on Github.
+- Multiple wolfpack instances cannot be run simultanuously, unless custom DWOLF_PACK directory is set.

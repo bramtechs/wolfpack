@@ -27,7 +27,7 @@ public:
 namespace wolfpack
 {
     namespace fs = std::filesystem;
-    using WolfpackError = std::runtime_error;
+    using WolfPackError = std::runtime_error;
 
     class OStreamOrNull
     {
@@ -58,7 +58,7 @@ namespace wolfpack
         const auto home_dir = std::getenv("HOME");
         if (!home_dir)
         {
-            throw WolfpackError("HOME environment variable is not set!");
+            throw WolfPackError("HOME environment variable is not set!");
         }
         return fs::path(home_dir) / ".wolfpack";
     }
@@ -102,13 +102,13 @@ namespace wolfpack
 
         if (!fs::exists(input_folder) || !fs::is_directory(input_folder))
         {
-            throw WolfpackError(fmt::format("Input folder '{}' does not exist!", input_folder));
+            throw WolfPackError(fmt::format("Input folder '{}' does not exist!", input_folder));
         }
 
         const auto input_file = input_folder / "wolfpack.json";
         if (!fs::exists(input_file) || !fs::is_regular_file(input_file))
         {
-            throw WolfpackError(fmt::format("Config file '{}' does not exist!", input_file));
+            throw WolfPackError(fmt::format("Config file '{}' does not exist!", input_file));
         }
 
         vout << fmt::format("Input folder is: {}\n", input_folder);
@@ -116,7 +116,7 @@ namespace wolfpack
 
         if (output_folder.has_extension())
         {
-            throw WolfpackError(fmt::format("Output '{}' needs to be a folder!", output_folder));
+            throw WolfPackError(fmt::format("Output '{}' needs to be a folder!", output_folder));
         }
 
         if (fs::create_directory(output_folder))
@@ -126,7 +126,7 @@ namespace wolfpack
 
         if (!fs::exists(output_folder) || !fs::is_directory(output_folder))
         {
-            throw WolfpackError(fmt::format("Failed to create output folder '{}'!", output_folder));
+            throw WolfPackError(fmt::format("Failed to create output folder '{}'!", output_folder));
         }
 
         // wolfpack.json parsing
@@ -144,11 +144,11 @@ namespace wolfpack
             {
                 if (name.empty())
                 {
-                    throw WolfpackError("Library name cannot be empty!");
+                    throw WolfPackError("Library name cannot be empty!");
                 }
                 if (name.find('/') == std::string::npos || name.starts_with('/') || name.ends_with('/'))
                 {
-                    throw WolfpackError(fmt::format("Library name '{}' does not have <author>/<repo_name> format!", name));
+                    throw WolfPackError(fmt::format("Library name '{}' does not have <author>/<repo_name> format!", name));
                 }
             }
         };
@@ -159,7 +159,7 @@ namespace wolfpack
         {
             if (!config_json.contains("libs"))
             {
-                throw WolfpackError("No libs key found");
+                throw WolfPackError("No libs key found");
             }
 
             for (auto &[name, options] : config_json["libs"].items())
@@ -176,7 +176,7 @@ namespace wolfpack
         }
         catch (std::exception &ex)
         {
-            throw WolfpackError(fmt::format("Parse error of '{}' -> {}", config_stream.str(), ex.what()));
+            throw WolfPackError(fmt::format("Parse error of '{}' -> {}", config_stream.str(), ex.what()));
         }
 
         auto run_command_logged = [verbose](const std::string &command) -> CommandResult
@@ -196,7 +196,7 @@ namespace wolfpack
 
         if (!run_command_logged("git --version"))
         {
-            throw WolfpackError("Git is not installed!");
+            throw WolfPackError("Git is not installed!");
         }
 
         // run async tasks

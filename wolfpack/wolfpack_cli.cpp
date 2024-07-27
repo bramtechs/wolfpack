@@ -6,11 +6,14 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
-#include <list>
+#include <chrono>
 #include <future>
 #include <nlohmann/json.hpp>
+#include <tl/expected.hpp>
 
 #include "utils.hpp"
+
+// TODO: switch to spdlog
 
 template <>
 class fmt::formatter<std::filesystem::path>
@@ -28,6 +31,9 @@ namespace wolfpack
 {
     namespace fs = std::filesystem;
     using WolfPackError = std::runtime_error;
+
+    using namespace std::chrono_literals;
+    using namespace std::string_literals;
 
     class OStreamOrNull
     {
@@ -53,6 +59,22 @@ namespace wolfpack
 
     static OStreamOrNull vout = {};
 
+    [[nodiscard]] static auto run_command_logged(const std::string &command) -> CommandResult {
+        auto future = run_command(command);
+        future.wait();
+        auto result = future.get();
+        if (result.has_value()) {
+            if (result == EXIT_SUCCESS) {
+                vout << result->output << "\n";
+            } else {
+                std::cerr << result->output << "\n";
+                std::cerr << fmt::format("Shell command '{}' failed with code {}!\n", result->command, result->code);
+            }
+            return std::move(*result);
+        }
+        throw WolfPackError(fmt::format("Unexpected IO error: {}\n", result.error()));
+    };
+
     auto get_default_clone_dir() -> fs::path
     {
         const auto home_dir = std::getenv("HOME");
@@ -63,14 +85,12 @@ namespace wolfpack
         return fs::path(home_dir) / ".wolfpack";
     }
 
-    auto run_wolfpack(int argc, char **argv) -> void
-    {
+    [[nodiscard]] auto run_with_args(int argc, char **argv) -> int {
         cxxopts::Options options("wolfpack", "Wolfpack downloader and synchronizer");
 
-        options.add_options()("i,input", "Your project folder where wolfpack.json is located", cxxopts::value<fs::path>()->default_value(fs::current_path().string())) //
-            ("o,output", "Folder where repos are cloned.", cxxopts::value<fs::path>()->default_value(get_default_clone_dir().string()))                                //
-            ("no-pull", "Do not pull existing repos")                                                                                                                  //
-            ("v,verbose", "Print more info")                                                                                                                           //
+        options.add_options() //
+                ("no-pull", "Do not pull existing repos") //
+                ("v,verbose", "Print more info")                                                                                                                           //
             ("h,help", "Print usage");
 
         const auto result = options.parse(argc, argv);
@@ -78,11 +98,14 @@ namespace wolfpack
         if (result.count("help"))
         {
             std::cout << options.help() << std::endl;
-            std::exit(0);
+            return 0;
         }
 
-        auto input_folder = result["input"].as<fs::path>().lexically_normal();
-        const auto output_folder = result["output"].as<fs::path>().lexically_normal();
+        const auto project_folder = fs::current_path();
+        const auto config_file = project_folder / "wolfpack.json";
+        const auto wolfpack_folder = project_folder / ".wolfpack";
+
+        const auto should_pull = !result["no-pull"].as<bool>();
 
 #ifdef NDEBUG
         const auto verbose = result["verbose"].as<bool>();
@@ -90,75 +113,60 @@ namespace wolfpack
         const auto verbose = true;
 #endif
 
-        if (verbose)
-        {
+        if (verbose) {
             vout = OStreamOrNull(&std::cout);
         }
 
-        if (input_folder.filename() == "wolfpack.json")
-        {
-            input_folder = input_folder.parent_path();
+        if (!fs::exists(config_file) || !fs::is_regular_file(config_file)) {
+            std::cout << "No wolfpack.json file found. Nothing to do.\n";
+            return 0;
         }
 
-        if (!fs::exists(input_folder) || !fs::is_directory(input_folder))
-        {
-            throw WolfPackError(fmt::format("Input folder '{}' does not exist!", input_folder));
+        vout << fmt::format("Input folder is: {}\n", project_folder);
+        vout << fmt::format("Output folder (wolfpack clone directory) is: {}\n", wolfpack_folder);
+
+        if (wolfpack_folder.has_extension()) {
+            throw WolfPackError(fmt::format("Output '{}' needs to be a folder!", wolfpack_folder));
         }
 
-        const auto input_file = input_folder / "wolfpack.json";
-        if (!fs::exists(input_file) || !fs::is_regular_file(input_file))
-        {
-            throw WolfPackError(fmt::format("Config file '{}' does not exist!", input_file));
+        if (fs::create_directory(wolfpack_folder)) {
+            vout << fmt::format("Created output folder at {}\n", wolfpack_folder);
         }
 
-        vout << fmt::format("Input folder is: {}\n", input_folder);
-        vout << fmt::format("Output folder (wolfpack clone directory) is: {}\n", output_folder);
-
-        if (output_folder.has_extension())
-        {
-            throw WolfPackError(fmt::format("Output '{}' needs to be a folder!", output_folder));
-        }
-
-        if (fs::create_directory(output_folder))
-        {
-            vout << fmt::format("Created output folder at {}\n", output_folder);
-        }
-
-        if (!fs::exists(output_folder) || !fs::is_directory(output_folder))
-        {
-            throw WolfPackError(fmt::format("Failed to create output folder '{}'!", output_folder));
+        if (!fs::exists(wolfpack_folder) || !fs::is_directory(wolfpack_folder)) {
+            throw WolfPackError(fmt::format("Failed to create output folder '{}'!", wolfpack_folder));
         }
 
         // wolfpack.json parsing
         std::stringstream config_stream;
-        config_stream << std::ifstream(input_file).rdbuf();
+        config_stream << std::ifstream(config_file).rdbuf();
         nlohmann::json config_json = nlohmann::json::parse(config_stream);
 
-        struct LibRepo
-        {
-            std::string name;
+        struct LibRepo {
+            std::string author;
+            std::string repo_name;
             std::string tag = "master";
 
-            LibRepo(const std::string &name)
-                : name(name)
-            {
-                if (name.empty())
-                {
+            LibRepo(const std::string &name) {
+                if (name.empty()) {
                     throw WolfPackError("Library name cannot be empty!");
                 }
-                if (name.find('/') == std::string::npos || name.starts_with('/') || name.ends_with('/'))
-                {
-                    throw WolfPackError(fmt::format("Library name '{}' does not have <author>/<repo_name> format!", name));
+                const size_t slash = name.find('/');
+                if (slash == std::string::npos || name.starts_with('/') || name.ends_with('/')) {
+                    throw WolfPackError(fmt::format("Library name '{}' does not have <author>/<repo_name> format!",
+                                                    name));
                 }
+
+                this->author = name.substr(0, slash);
+                this->repo_name = name.substr(slash + 1);
             }
         };
 
-        std::list<LibRepo> libs{};
+        std::vector<LibRepo> libs{};
+        libs.reserve(100);
 
-        try
-        {
-            if (!config_json.contains("libs"))
-            {
+        try {
+            if (!config_json.contains("libs")) {
                 throw WolfPackError("No libs key found");
             }
 
@@ -179,27 +187,70 @@ namespace wolfpack
             throw WolfPackError(fmt::format("Parse error of '{}' -> {}", config_stream.str(), ex.what()));
         }
 
-        auto run_command_logged = [verbose](const std::string &command) -> CommandResult
-        {
-            CommandResult result = run_command(command);
-            if (result)
-            {
-                vout << result.output.str() << "\n";
-            }
-            else
-            {
-                std::cerr << result.output.str() << "\n";
-                std::cerr << fmt::format("Shell command '{}' failed with code {}!\n", result.command, result.code);
-            }
-            return result;
-        };
-
-        if (!run_command_logged("git --version"))
-        {
-            throw WolfPackError("Git is not installed!");
+        if (run_command_logged("git --version") == EXIT_FAILURE) {
+            throw WolfPackError("Git is not installed! It is needed.");
         }
 
         // run async tasks
+        const auto SyncLibRepo = [&wolfpack_folder, should_pull](const LibRepo &lib) -> std::string {
+            const auto repo_folder = wolfpack_folder / lib.author / lib.repo_name;
+            if (fs::create_directories(repo_folder)) {
+                vout << fmt::format("Created directory {}\n", repo_folder);
+
+                std::cout << fmt::format("Cloning repo {}/{}...\n", lib.author, lib.repo_name);
+
+                const auto git_url = fmt::format("https://github.com/{}/{}", lib.author, lib.repo_name);
+                if (run_command_logged(fmt::format("git clone '{}' '{}' --depth 1 --recursive", git_url, repo_folder))
+                    == EXIT_FAILURE) {
+                    return fmt::format("Failed to clone repo '{}' to '{}'", git_url, repo_folder);
+                }
+
+                if (run_command_logged(fmt::format("git -C {} fetch --tags", repo_folder)) == EXIT_FAILURE) {
+                    return fmt::format("Failed to checkout repo tags of repo {}/{}", lib.author, lib.repo_name);
+                }
+            } else {
+                if (should_pull) {
+                    if (run_command_logged(fmt::format("git -C {} pull", repo_folder)) == EXIT_FAILURE) {
+                        return fmt::format("Failed to pull repo {}/{}", lib.author, lib.repo_name);
+                    }
+                }
+            }
+
+            if (run_command_logged(fmt::format("git -C {} checkout {}", repo_folder, lib.tag)) == EXIT_FAILURE) {
+                return fmt::format("Failed to checkout branch/tag {} in repo {}/{}", lib.tag, lib.author,
+                                   lib.repo_name);
+            }
+
+            // TODO:
+            return ""s; // no errors occured :)
+        };
+
+        std::vector<std::future<std::string> > tasks{};
+        for (const auto &lib: libs) {
+            tasks.emplace_back(std::async(std::launch::async, SyncLibRepo, lib));
+        }
+
+        bool done;
+        bool tasksFailed = false;
+        std::vector<bool> readyTasks(tasks.size());
+        do {
+            for (auto i = 0; i < tasks.size(); i++) {
+                done = true;
+                if (!readyTasks[i]) {
+                    done = false;
+
+                    if (auto status = tasks[i].wait_for(10ms); status == std::future_status::ready) {
+                        if (auto error = tasks[i].get(); !error.empty()) {
+                            std::cerr << fmt::format("Task failed with error: {}\n", error);
+                            tasksFailed = true;
+                        }
+                    }
+                    readyTasks[i] = true;
+                }
+            }
+        } while (!done);
+
+        return tasksFailed ? EXIT_FAILURE : EXIT_SUCCESS;
     }
 }
 
@@ -207,14 +258,11 @@ namespace wolfpack
 #define CATCH_EXCEPTIONS
 #endif
 
-auto main(int argc, char **argv) -> int
-{
+auto main(int argc, char **argv) -> int {
 #ifdef CATCH_EXCEPTIONS
-    try
-    {
+    try {
 #endif
-        wolfpack::run_wolfpack(argc, argv);
-        return 0;
+        return wolfpack::run_with_args(argc, argv);
 #ifdef CATCH_EXCEPTIONS
     }
     catch (std::exception &ex)

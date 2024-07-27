@@ -14,6 +14,15 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(fmt)
 
 FetchContent_Declare(
+        expected
+        GIT_REPOSITORY https://github.com/TartanLlama/expected.git
+        GIT_TAG v1.1.0
+        GIT_SHALLOW 1
+        GIT_PROGRESS TRUE
+)
+FetchContent_MakeAvailable(expected)
+
+FetchContent_Declare(
   cxxopts
   GIT_REPOSITORY https://github.com/jarro2783/cxxopts.git
   GIT_TAG v3.2.1

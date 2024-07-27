@@ -6,7 +6,7 @@ Created to stop me from swearing while using existing C++ package managers.
 
 ## Install
 
-```cmake
+```shell
 git clone https://github.com/bramtechs/wolfpack
 cmake -S . -B build
 cmake --build build --parallel
@@ -35,12 +35,15 @@ Create a `wolfpack.json` file next to your project's CMakeLists.txt.
 
 Tag can also be set to a branch, like 'main' or 'master'.
 
-wolfpack will clone repos to `$HOME/.wolfpack/<author>/<repo>` by default and share them between projects.
+wolfpack will clone repos to the `.wolfpack` directory. You should add it to your `.gitignore` file.
 
+```shell
+echo .wolfpack >> .gitignore
+```
 Finally, add to your project's CMakeLists.txt.
 
 ```cmake
-add_subdirectory(${WOLF_PACK}/fmtlib/fmt)
+add_subdirectory(.wolfpack/fmtlib/fmt)
 
 # (add_executable or add_library)
 
@@ -49,24 +52,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE fmt)
 
 ## Usage
 
-TODO: Use `wcmake` that wraps `cmake`.
-
 ```sh
-wpcmake -S . -B build
-```
-
-If you don't want to use the wrapper, use this instead.
-
-```sh
-wolfpack && cmake -DWOLF_PACK="$HOME/.wolfpack" -S . -B build
-
-# or if you don't want to share dependencies between projects
-wolfpack -o ".wolfpack" && cmake -DWOLF_PACK=".wolfpack" -S . -B build
+wolfpack && cmake ...
 ```
 
 ## Limitations
 
-- Source builds only (cmake will get slow when using lots of dependencies)
+- Source builds of dependencies only
 - Dependencies must use CMake.
-- Repos must be hosted on Github.
-- Multiple wolfpack instances cannot be run simultanuously, unless custom DWOLF_PACK directory is set.
+- Repos must be hosted on Github. **TODO: allow any git address**

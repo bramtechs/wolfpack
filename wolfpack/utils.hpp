@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
-#include <sstream>
+#include <future>
+#include <tl/expected.hpp>
 
 namespace wolfpack
 {
@@ -8,14 +9,12 @@ namespace wolfpack
     {
         int code;
         std::string command;
-        std::stringstream output;
+        std::string output;
 
-        operator bool() const
-        {
-            return code == EXIT_SUCCESS;
+        operator int() const {
+            return code;
         }
     };
 
-    auto run_command(const std::string) -> CommandResult;
-
+    auto run_command(const std::string &) -> std::future<tl::expected<CommandResult, std::string> >;
 }

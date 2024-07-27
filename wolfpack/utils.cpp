@@ -1,7 +1,9 @@
 #include "utils.hpp"
+
 #include <iostream>
 #include <cstdio>
 #include <array>
+#include <sstream>
 #include <fmt/format.h>
 
 #ifdef _WIN32
@@ -12,7 +14,7 @@
 namespace wolfpack {
     static auto run_async_task(const std::string &command) -> tl::expected<CommandResult, std::string> {
         std::string error;
-        std::stringstream outputStream;
+        std::stringstream output_stream;
 
         CommandResult cmd_result{
             .code = EXIT_FAILURE,
@@ -25,7 +27,7 @@ namespace wolfpack {
             try {
                 std::array<char, 128> buffer{};
                 while (fgets(buffer.data(), buffer.size(), pipe) != nullptr) {
-                    outputStream << buffer.data();
+                    output_stream << buffer.data();
                 }
                 cmd_result.code = pclose(pipe);
             } catch (std::exception &ex) {
@@ -39,7 +41,7 @@ namespace wolfpack {
         if (!error.empty()) {
             return tl::make_unexpected(error);
         }
-        cmd_result.output = outputStream.str();
+        cmd_result.output = output_stream.str();
         return cmd_result;
     };
 

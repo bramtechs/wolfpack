@@ -1,8 +1,8 @@
 # wolfpack
 
-Simple async vcpkg-like package manager for CMake C++.
+Simple async vcpkg-like package manager for C++ CMake dependencies.
 
-Created to stop me from swearing while using existing C++ package managers.
+Created to stop me from swearing while using existing solutions.
 
 ## Install
 

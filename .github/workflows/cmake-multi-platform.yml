@@ -64,6 +64,7 @@ jobs:
         ${{ steps.strings.outputs.build-output-dir }}/install/bin/wolfpack --verbose
         cmake -S . -B build -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         cmake --build build --parallel
+        echo "POST RUN WOLFPACK"
         ${{ steps.strings.outputs.build-output-dir }}/install/bin/wolfpack --pull --verbose
       env:
         CC: ${{ matrix.c_compiler }}
@@ -75,6 +76,7 @@ jobs:
         ${{ steps.strings.outputs.build-output-dir }}/install/bin/wolfpack --verbose
         cmake -S . -B build -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         cmake --build build --parallel
+        echo "POST RUN WOLFPACK"
         ${{ steps.strings.outputs.build-output-dir }}/install/bin/wolfpack --pull --verbose
       env:
         CC: ${{ matrix.c_compiler }}

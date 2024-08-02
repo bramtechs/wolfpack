@@ -142,22 +142,24 @@ auto get_default_clone_dir() -> fs::path
 
     struct LibRepo {
         std::string author;
-        std::string repo_name;
+        std::string repo_name;        
+        std::string url;
         std::string tag = "master";
 
-        LibRepo(const std::string& name)
+        LibRepo(const std::string& name, const std::optional<std::string>& customUrl)
         {
+            // parse name
             if (name.empty()) {
                 throw WolfPackError("Library name cannot be empty!");
             }
             const size_t slash = name.find('/');
             if (slash == std::string::npos || name.starts_with('/') || name.ends_with('/')) {
-                throw WolfPackError(fmt::format("Library name '{}' does not have <author>/<repo_name> format!",
-                    name));
+                throw WolfPackError(fmt::format("Library name '{}' does not have <author>/<repo_name> format!", name));
             }
 
             this->author = name.substr(0, slash);
             this->repo_name = name.substr(slash + 1);
+            this->url = customUrl.value_or(fmt::format("https://github.com/{}/{}", author, repo_name));
         }
     };
 
@@ -170,7 +172,11 @@ auto get_default_clone_dir() -> fs::path
         }
 
         for (auto& [name, options] : config_json["libs"].items()) {
-            LibRepo lib(name);
+            std::optional<std::string> url {};
+            if (options.contains("url")) {
+                url = options["url"];
+            }
+            LibRepo lib(name, url);
             if (options.contains("tag")) {
                 lib.tag = options["tag"];
             }
@@ -198,14 +204,13 @@ auto get_default_clone_dir() -> fs::path
 
             std::cout << fmt::format("Cloning repo {}/{}...\n", lib.author, lib.repo_name);
 
-            const auto git_url = fmt::format("https://github.com/{}/{}", lib.author, lib.repo_name);
-            if (git_url.find(' ') != std::string::npos) {
-                return fmt::format("Git url '{}' cannot contain spaces!", git_url);
+            if (lib.url.find(' ') != std::string::npos) {
+                return fmt::format("Git url '{}' cannot contain spaces!", lib.url);
             }
 
-            if (run_command_logged(fmt::format("git clone {} {} --depth 1 --recursive", git_url, repo_folder))
+            if (run_command_logged(fmt::format("git clone {} {} --depth 1 --recursive", lib.url, repo_folder))
                 == EXIT_FAILURE) {
-                return fmt::format("Failed to clone repo '{}' to '{}'", git_url, repo_folder);
+                return fmt::format("Failed to clone repo '{}' to '{}'", lib.url, repo_folder);
             }
 
             if (run_command_logged(fmt::format("git -C {} fetch --tags", repo_folder)) == EXIT_FAILURE) {

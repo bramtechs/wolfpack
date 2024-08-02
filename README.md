@@ -28,6 +28,20 @@ Create a `wolfpack.json` file next to your project's CMakeLists.txt.
 }
 ```
 
+By default, dependencies are pulled from Github. You can specify the repo address explicitly.
+
+```
+{
+  "version": 1,
+  "libs": {
+    "fmtlib/fmt": {
+      "tag": "11.0.2",
+	  "url": "bram@nas:/volume1/git/third-party/fmtlib/fmt"
+    }
+  }
+}
+```
+
 Tag can also be set to a branch (like 'main' or 'master') or a commit id.
 
 Finally, add to your project's CMakeLists.txt.

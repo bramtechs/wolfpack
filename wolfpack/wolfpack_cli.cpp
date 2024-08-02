@@ -212,7 +212,7 @@ auto get_default_clone_dir() -> fs::path
             }
 
             if (!run_command_logged(fmt::format("git -C {} fetch --tags", repo_folder))) {
-                return fmt::format("Failed to checkout repo tags of repo {}/{}", lib.author, lib.repo_name);
+                return fmt::format("Failed to fetch repo tags of repo {}/{}", lib.author, lib.repo_name);
             }
         } else {
             if (should_pull) {
@@ -228,7 +228,15 @@ auto get_default_clone_dir() -> fs::path
         }
 
         if (!run_command_logged(fmt::format("git -C {} checkout {}", repo_folder, lib.tag))) {
-            return fmt::format("Failed to checkout branch/tag {} in repo {}/{}", lib.tag, lib.author, lib.repo_name);
+            std::cerr << fmt::format("Failed to checkout branch/tag {} in repo {}/{}, fetching tags again...\n", lib.tag, lib.author, lib.repo_name);
+            
+            if (!run_command_logged(fmt::format("git -C {} fetch --tags", repo_folder))) {
+                return fmt::format("Failed to fetch repo tags of repo {}/{}", lib.author, lib.repo_name);
+            }
+            
+            if (!run_command_logged(fmt::format("git -C {} checkout {}", repo_folder, lib.tag))) {
+                return fmt::format("Failed to checkout branch/tag {} in repo {}/{}", lib.tag, lib.author, lib.repo_name);
+            }
         }
 
         // TODO:
@@ -240,25 +248,14 @@ auto get_default_clone_dir() -> fs::path
         tasks.emplace_back(std::async(std::launch::async, SyncLibRepo, lib));
     }
 
-    bool done;
-    bool tasksFailed = false;
-    std::vector<bool> readyTasks(tasks.size());
-    do {
-        for (auto i = 0; i < tasks.size(); i++) {
-            done = true;
-            if (!readyTasks[i]) {
-                done = false;
-
-                if (auto status = tasks[i].wait_for(10ms); status == std::future_status::ready) {
-                    if (const std::string error = tasks[i].get(); !error.empty()) {
-                        std::cerr << fmt::format("Task failed with error: {}\n", error);
-                        tasksFailed = true;
-                    }
-                    readyTasks[i] = true;
-                }
-            }
+    bool tasksFailed = false;    
+    for (auto i = 0; i < tasks.size(); i++) {
+        tasks[i].wait();
+        if (const std::string error = tasks[i].get(); !error.empty()) {
+            std::cerr << fmt::format("Task failed with error: {}\n", error);
+            tasksFailed = true;
         }
-    } while (!done);
+    }
 
     int code = tasksFailed ? EXIT_FAILURE : EXIT_SUCCESS;
     if (verbose) {

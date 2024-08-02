@@ -6,3 +6,5 @@ add_executable(${PROJECT_NAME}
     utils.hpp
 )
 target_link_libraries(${PROJECT_NAME} PRIVATE fmt cxxopts nlohmann_json::nlohmann_json tl::expected)
+
+install(TARGETS ${PROJECT_NAME} RUNTIME)

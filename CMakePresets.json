@@ -2,8 +2,17 @@
   "version": 8,
   "configurePresets": [
     {
-      "name": "windows",
+      "name": "default",
       "generator": "Visual Studio 17 2022",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    }
+	{
+      "name": "example",
+      "generator": "Visual Studio 17 2022",
+	  "sourceDir": "example",
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"

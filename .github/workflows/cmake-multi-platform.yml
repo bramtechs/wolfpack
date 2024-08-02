@@ -64,14 +64,10 @@ jobs:
         ${{ steps.strings.outputs.build-output-dir }}/install/bin/wolfpack --verbose
         cmake -S . -B build -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         cmake --build build --parallel
+        ${{ steps.strings.outputs.build-output-dir }}/install/bin/wolfpack --pull --verbose
       env:
         CC: ${{ matrix.c_compiler }}
         CXX: ${{ matrix.cpp_compiler }}
-       
-    - name: Build example 01 (post run)
-      run: |
-        cd ${{ github.workspace }}/tests/01
-        ${{ steps.strings.outputs.build-output-dir }}/install/bin/wolfpack --pull --verbose
        
     - name: Build example 02
       run: |
@@ -79,11 +75,8 @@ jobs:
         ${{ steps.strings.outputs.build-output-dir }}/install/bin/wolfpack --verbose
         cmake -S . -B build -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         cmake --build build --parallel
+        ${{ steps.strings.outputs.build-output-dir }}/install/bin/wolfpack --pull --verbose
       env:
         CC: ${{ matrix.c_compiler }}
         CXX: ${{ matrix.cpp_compiler }}
-    
-    - name: Build example 02 (post run)
-      run: |
-        cd ${{ github.workspace }}/tests/02
-        ${{ steps.strings.outputs.build-output-dir }}/install/bin/wolfpack --pull --verbose
+        

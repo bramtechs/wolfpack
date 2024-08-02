@@ -58,7 +58,7 @@ jobs:
     - name: Install
       run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} --target install
       
-    - name: Build example 01
+    - name: Build test project 01
       run: |
         cd ${{ github.workspace }}/tests/01
         ${{ steps.strings.outputs.build-output-dir }}/install/bin/wolfpack --verbose
@@ -69,7 +69,7 @@ jobs:
         CC: ${{ matrix.c_compiler }}
         CXX: ${{ matrix.cpp_compiler }}
        
-    - name: Build example 02
+    - name: Build test project 02
       run: |
         cd ${{ github.workspace }}/tests/02
         ${{ steps.strings.outputs.build-output-dir }}/install/bin/wolfpack --verbose

@@ -62,10 +62,7 @@ jobs:
       run: |
         cd ${{ github.workspace }}/example
         ${{ steps.strings.outputs.build-output-dir }}/install/bin/wolfpack --verbose
-        cmake -S . -B build \
-            -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
-            -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        cmake -S . -B build -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         cmake --build build --parallel
       env:
         CC: ${{ matrix.c_compiler }}

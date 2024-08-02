@@ -97,8 +97,6 @@ auto get_default_clone_dir() -> fs::path
         return 0;
     }
 
-    std::cout << "Running wolfpack...\n";
-
     const auto project_folder = fs::current_path();
     const auto config_file = project_folder / "wolfpack.json";
     const auto wolfpack_folder = project_folder / ".wolfpack";
@@ -112,6 +110,7 @@ auto get_default_clone_dir() -> fs::path
 #endif
 
     if (verbose) {
+        std::cout << "Running wolfpack...\n";
         vout = OStreamOrNull(&std::cout);
     }
 
@@ -261,7 +260,11 @@ auto get_default_clone_dir() -> fs::path
         }
     } while (!done);
 
-    return tasksFailed ? EXIT_FAILURE : EXIT_SUCCESS;
+    int code = tasksFailed ? EXIT_FAILURE : EXIT_SUCCESS;
+    if (verbose) {
+        fmt::println("wolfpack exiting with code {} -> {}", code, code == EXIT_SUCCESS ? "SUCCESS":"FAILURE");
+    }
+    return code;
 }
 }
 

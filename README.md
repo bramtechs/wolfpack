@@ -6,6 +6,7 @@ Simple and async vcpkg-like package manager for downloading CMake dependencies.
 
 ```shell
 git clone https://github.com/bramtechs/wolfpack
+cd wolfpack
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=.
 cmake --build build --parallel --target install
 ```

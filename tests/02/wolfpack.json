@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "libs": {
+    "fmtlib/fmt": {
+      "tag": "11.0.2"
+    }
+  }
+}

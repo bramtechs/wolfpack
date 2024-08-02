@@ -254,8 +254,8 @@ auto get_default_clone_dir() -> fs::path
                         std::cerr << fmt::format("Task failed with error: {}\n", error);
                         tasksFailed = true;
                     }
+                    readyTasks[i] = true;
                 }
-                readyTasks[i] = true;
             }
         }
     } while (!done);
@@ -280,7 +280,7 @@ auto main(int argc, char** argv) -> int
         return wolfpack::run_with_args(argc, argv);
 #ifdef CATCH_EXCEPTIONS
     } catch (std::exception& ex) {
-        std::cerr << "error: " << ex.what() << std::endl;
+        std::cerr << "wolfpack error: " << ex.what() << std::endl;
         return 1;
     }
 #endif

@@ -59,12 +59,12 @@ jobs:
       run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} --target install
       
     - name: Build example
-      run: >
+      run: |
         cd ${{ github.workspace }}/example
         ${{ steps.strings.outputs.build-output-dir }}/bin/wolfpack --verbose
-        cmake --preset example
-            -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
-            -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+        cmake --preset example \
+            -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
+            -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         cmake --build build --parallel
         

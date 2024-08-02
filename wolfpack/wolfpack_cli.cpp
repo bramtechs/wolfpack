@@ -189,13 +189,21 @@ auto get_default_clone_dir() -> fs::path
     // run async tasks
     const auto SyncLibRepo = [&wolfpack_folder, should_pull](const LibRepo& lib) -> std::string {
         const auto repo_folder = wolfpack_folder / lib.author / lib.repo_name;
+        if (repo_folder.string().find(' ') != std::string::npos) {
+            return fmt::format("Folders with spaces are not supported yet, sorry: '{}'", repo_folder);
+        }
+
         if (fs::create_directories(repo_folder)) {
             vout << fmt::format("Created directory {}\n", repo_folder);
 
             std::cout << fmt::format("Cloning repo {}/{}...\n", lib.author, lib.repo_name);
 
             const auto git_url = fmt::format("https://github.com/{}/{}", lib.author, lib.repo_name);
-            if (run_command_logged(fmt::format("git clone '{}' '{}' --depth 1 --recursive", git_url, repo_folder))
+            if (git_url.find(' ') != std::string::npos) {
+                return fmt::format("Git url '{}' cannot contain spaces!", git_url);
+            }
+
+            if (run_command_logged(fmt::format("git clone {} {} --depth 1 --recursive", git_url, repo_folder))
                 == EXIT_FAILURE) {
                 return fmt::format("Failed to clone repo '{}' to '{}'", git_url, repo_folder);
             }

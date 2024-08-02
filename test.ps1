@@ -1,2 +1,6 @@
-./build/wolfpack/Debug/wolfpack.exe -h
-./build/wolfpack/Debug/wolfpack.exe -i example -o .wolfpack
+./install.ps1
+
+Push-Location example
+../bin/wolfpack --verbose
+cmake --preset example
+Pop-Location

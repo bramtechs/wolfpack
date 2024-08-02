@@ -61,7 +61,7 @@ static OStreamOrNull vout = {};
     future.wait();
     auto result = future.get();
     if (result.has_value()) {
-        if (result == EXIT_SUCCESS) {
+        if (*result) {
             vout << result->output << "\n";
         } else {
             std::cerr << result->output << "\n";

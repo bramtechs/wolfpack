@@ -188,7 +188,7 @@ auto get_default_clone_dir() -> fs::path
         throw WolfPackError(fmt::format("Parse error of '{}' -> {}", config_stream.str(), ex.what()));
     }
 
-    if (run_command_logged("git --version") == EXIT_FAILURE) {
+    if (!run_command_logged("git --version")) {
         throw WolfPackError("Git is not installed! It is needed.");
     }
 
@@ -208,30 +208,28 @@ auto get_default_clone_dir() -> fs::path
                 return fmt::format("Git url '{}' cannot contain spaces!", lib.url);
             }
 
-            if (run_command_logged(fmt::format("git clone {} {} --depth 1 --recursive", lib.url, repo_folder))
-                == EXIT_FAILURE) {
+            if (!run_command_logged(fmt::format("git clone {} {} --depth 1 --recursive", lib.url, repo_folder))) {
                 return fmt::format("Failed to clone repo '{}' to '{}'", lib.url, repo_folder);
             }
 
-            if (run_command_logged(fmt::format("git -C {} fetch --tags", repo_folder)) == EXIT_FAILURE) {
+            if (!run_command_logged(fmt::format("git -C {} fetch --tags", repo_folder))) {
                 return fmt::format("Failed to checkout repo tags of repo {}/{}", lib.author, lib.repo_name);
             }
         } else {
             if (should_pull) {
 
-                if (run_command_logged(fmt::format("git -C {} config pull.rebase false", repo_folder)) == EXIT_FAILURE) {
+                if (!run_command_logged(fmt::format("git -C {} config pull.rebase false", repo_folder))) {
                     return fmt::format("Failed to set config option for repo {}/{}", lib.author, lib.repo_name);
                 }
 
-                if (run_command_logged(fmt::format("git -C {} pull", repo_folder)) == EXIT_FAILURE) {
+                if (!run_command_logged(fmt::format("git -C {} pull", repo_folder))) {
                     return fmt::format("Failed to pull repo {}/{}", lib.author, lib.repo_name);
                 }
             }
         }
 
-        if (run_command_logged(fmt::format("git -C {} checkout {}", repo_folder, lib.tag)) == EXIT_FAILURE) {
-            return fmt::format("Failed to checkout branch/tag {} in repo {}/{}", lib.tag, lib.author,
-                lib.repo_name);
+        if (!run_command_logged(fmt::format("git -C {} checkout {}", repo_folder, lib.tag))) {
+            return fmt::format("Failed to checkout branch/tag {} in repo {}/{}", lib.tag, lib.author, lib.repo_name);
         }
 
         // TODO:
@@ -253,7 +251,7 @@ auto get_default_clone_dir() -> fs::path
                 done = false;
 
                 if (auto status = tasks[i].wait_for(10ms); status == std::future_status::ready) {
-                    if (auto error = tasks[i].get(); !error.empty()) {
+                    if (const std::string error = tasks[i].get(); !error.empty()) {
                         std::cerr << fmt::format("Task failed with error: {}\n", error);
                         tasksFailed = true;
                     }
@@ -267,7 +265,7 @@ auto get_default_clone_dir() -> fs::path
 }
 }
 
-#if defined(NDEBUG) || 1
+#if defined(NDEBUG)
 #define CATCH_EXCEPTIONS
 #endif
 

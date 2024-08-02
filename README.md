@@ -1,22 +1,16 @@
 # wolfpack
 
-Simple async vcpkg-like package manager for C++ CMake dependencies.
-
-Created to stop me from swearing while using existing solutions.
+Simple and async vcpkg-like package manager for downloading CMake dependencies.
 
 ## Install
 
 ```shell
 git clone https://github.com/bramtechs/wolfpack
-cmake -S . -B build
-cmake --build build --parallel
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=.
+cmake --build build --parallel --target install
 ```
 
-Now add to $PATH
-
-```
-TODO
-```
+Now add the generated ```bin``` folder to your $PATH.
 
 ## Configuration
 
@@ -33,27 +27,34 @@ Create a `wolfpack.json` file next to your project's CMakeLists.txt.
 }
 ```
 
-Tag can also be set to a branch, like 'main' or 'master'.
+Tag can also be set to a branch (like 'main' or 'master') or a commit id.
 
-wolfpack will clone repos to the `.wolfpack` directory. You should add it to your `.gitignore` file.
-
-```shell
-echo .wolfpack >> .gitignore
-```
 Finally, add to your project's CMakeLists.txt.
 
 ```cmake
 add_subdirectory(.wolfpack/fmtlib/fmt)
 
-# (add_executable or add_library)
+# ... snip ...
 
 target_link_libraries(${PROJECT_NAME} PRIVATE fmt)
+```
+
+wolfpack will clone repos to the `.wolfpack` directory, which you should add to your `.gitignore` file.
+
+```shell
+echo .wolfpack >> .gitignore
 ```
 
 ## Usage
 
 ```sh
 wolfpack && cmake ...
+```
+
+To pull the latest versions of the dependencies:
+
+```sh
+wolfpack --pull && cmake ...
 ```
 
 ## Limitations

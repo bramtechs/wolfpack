@@ -219,7 +219,7 @@ auto get_default_clone_dir() -> fs::path
         } else {
             if (should_pull) {
 
-                if (run_command_logged(fmt::format("git -C {} config pull.rebase true", repo_folder)) == EXIT_FAILURE) {
+                if (run_command_logged(fmt::format("git -C {} config pull.rebase false", repo_folder)) == EXIT_FAILURE) {
                     return fmt::format("Failed to set config option for repo {}/{}", lib.author, lib.repo_name);
                 }
 

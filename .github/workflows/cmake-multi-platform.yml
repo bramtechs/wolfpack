@@ -86,4 +86,4 @@ jobs:
     - name: Build example 02 (post run)
       run: |
         cd ${{ github.workspace }}/tests/02
-        ${{ steps.strings.outputs.build-output-dir }}/install/bin/wolfpack -pull --verbose
+        ${{ steps.strings.outputs.build-output-dir }}/install/bin/wolfpack --pull --verbose

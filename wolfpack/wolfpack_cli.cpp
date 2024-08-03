@@ -61,7 +61,7 @@ static OStreamOrNull vout = {};
     future.wait();
     auto result = future.get();
     if (result.has_value()) {
-        if (result == EXIT_SUCCESS) {
+        if (*result) {
             vout << result->output << "\n";
         } else {
             std::cerr << result->output << "\n";
@@ -97,8 +97,6 @@ auto get_default_clone_dir() -> fs::path
         return 0;
     }
 
-    std::cout << "Running wolfpack...\n";
-
     const auto project_folder = fs::current_path();
     const auto config_file = project_folder / "wolfpack.json";
     const auto wolfpack_folder = project_folder / ".wolfpack";
@@ -112,6 +110,7 @@ auto get_default_clone_dir() -> fs::path
 #endif
 
     if (verbose) {
+        std::cout << "Running wolfpack...\n";
         vout = OStreamOrNull(&std::cout);
     }
 
@@ -142,22 +141,24 @@ auto get_default_clone_dir() -> fs::path
 
     struct LibRepo {
         std::string author;
-        std::string repo_name;
+        std::string repo_name;        
+        std::string url;
         std::string tag = "master";
 
-        LibRepo(const std::string& name)
+        LibRepo(const std::string& name, const std::optional<std::string>& customUrl)
         {
+            // parse name
             if (name.empty()) {
                 throw WolfPackError("Library name cannot be empty!");
             }
             const size_t slash = name.find('/');
             if (slash == std::string::npos || name.starts_with('/') || name.ends_with('/')) {
-                throw WolfPackError(fmt::format("Library name '{}' does not have <author>/<repo_name> format!",
-                    name));
+                throw WolfPackError(fmt::format("Library name '{}' does not have <author>/<repo_name> format!", name));
             }
 
             this->author = name.substr(0, slash);
             this->repo_name = name.substr(slash + 1);
+            this->url = customUrl.value_or(fmt::format("https://github.com/{}/{}", author, repo_name));
         }
     };
 
@@ -170,7 +171,11 @@ auto get_default_clone_dir() -> fs::path
         }
 
         for (auto& [name, options] : config_json["libs"].items()) {
-            LibRepo lib(name);
+            std::optional<std::string> url {};
+            if (options.contains("url")) {
+                url = options["url"];
+            }
+            LibRepo lib(name, url);
             if (options.contains("tag")) {
                 lib.tag = options["tag"];
             }
@@ -182,7 +187,7 @@ auto get_default_clone_dir() -> fs::path
         throw WolfPackError(fmt::format("Parse error of '{}' -> {}", config_stream.str(), ex.what()));
     }
 
-    if (run_command_logged("git --version") == EXIT_FAILURE) {
+    if (!run_command_logged("git --version")) {
         throw WolfPackError("Git is not installed! It is needed.");
     }
 
@@ -198,35 +203,40 @@ auto get_default_clone_dir() -> fs::path
 
             std::cout << fmt::format("Cloning repo {}/{}...\n", lib.author, lib.repo_name);
 
-            const auto git_url = fmt::format("https://github.com/{}/{}", lib.author, lib.repo_name);
-            if (git_url.find(' ') != std::string::npos) {
-                return fmt::format("Git url '{}' cannot contain spaces!", git_url);
+            if (lib.url.find(' ') != std::string::npos) {
+                return fmt::format("Git url '{}' cannot contain spaces!", lib.url);
             }
 
-            if (run_command_logged(fmt::format("git clone {} {} --depth 1 --recursive", git_url, repo_folder))
-                == EXIT_FAILURE) {
-                return fmt::format("Failed to clone repo '{}' to '{}'", git_url, repo_folder);
+            if (!run_command_logged(fmt::format("git clone {} {} --depth 1 --recursive", lib.url, repo_folder))) {
+                return fmt::format("Failed to clone repo '{}' to '{}'", lib.url, repo_folder);
             }
 
-            if (run_command_logged(fmt::format("git -C {} fetch --tags", repo_folder)) == EXIT_FAILURE) {
-                return fmt::format("Failed to checkout repo tags of repo {}/{}", lib.author, lib.repo_name);
+            if (!run_command_logged(fmt::format("git -C {} fetch --tags", repo_folder))) {
+                return fmt::format("Failed to fetch repo tags of repo {}/{}", lib.author, lib.repo_name);
             }
         } else {
             if (should_pull) {
 
-                if (run_command_logged(fmt::format("git -C {} config pull.rebase true", repo_folder)) == EXIT_FAILURE) {
+                if (!run_command_logged(fmt::format("git -C {} config pull.rebase false", repo_folder))) {
                     return fmt::format("Failed to set config option for repo {}/{}", lib.author, lib.repo_name);
                 }
 
-                if (run_command_logged(fmt::format("git -C {} pull", repo_folder)) == EXIT_FAILURE) {
+                if (!run_command_logged(fmt::format("git -C {} pull", repo_folder))) {
                     return fmt::format("Failed to pull repo {}/{}", lib.author, lib.repo_name);
                 }
             }
         }
 
-        if (run_command_logged(fmt::format("git -C {} checkout {}", repo_folder, lib.tag)) == EXIT_FAILURE) {
-            return fmt::format("Failed to checkout branch/tag {} in repo {}/{}", lib.tag, lib.author,
-                lib.repo_name);
+        if (!run_command_logged(fmt::format("git -C {} checkout {}", repo_folder, lib.tag))) {
+            std::cerr << fmt::format("Failed to checkout branch/tag {} in repo {}/{}, fetching tags again...\n", lib.tag, lib.author, lib.repo_name);
+            
+            if (!run_command_logged(fmt::format("git -C {} fetch --tags", repo_folder))) {
+                return fmt::format("Failed to fetch repo tags of repo {}/{}", lib.author, lib.repo_name);
+            }
+            
+            if (!run_command_logged(fmt::format("git -C {} checkout {}", repo_folder, lib.tag))) {
+                return fmt::format("Failed to checkout branch/tag {} in repo {}/{}", lib.tag, lib.author, lib.repo_name);
+            }
         }
 
         // TODO:
@@ -238,31 +248,24 @@ auto get_default_clone_dir() -> fs::path
         tasks.emplace_back(std::async(std::launch::async, SyncLibRepo, lib));
     }
 
-    bool done;
-    bool tasksFailed = false;
-    std::vector<bool> readyTasks(tasks.size());
-    do {
-        for (auto i = 0; i < tasks.size(); i++) {
-            done = true;
-            if (!readyTasks[i]) {
-                done = false;
-
-                if (auto status = tasks[i].wait_for(10ms); status == std::future_status::ready) {
-                    if (auto error = tasks[i].get(); !error.empty()) {
-                        std::cerr << fmt::format("Task failed with error: {}\n", error);
-                        tasksFailed = true;
-                    }
-                }
-                readyTasks[i] = true;
-            }
+    bool tasksFailed = false;    
+    for (auto i = 0; i < tasks.size(); i++) {
+        tasks[i].wait();
+        if (const std::string error = tasks[i].get(); !error.empty()) {
+            std::cerr << fmt::format("Task failed with error: {}\n", error);
+            tasksFailed = true;
         }
-    } while (!done);
+    }
 
-    return tasksFailed ? EXIT_FAILURE : EXIT_SUCCESS;
+    int code = tasksFailed ? EXIT_FAILURE : EXIT_SUCCESS;
+    if (verbose) {
+        fmt::println("wolfpack exiting with code {} -> {}", code, code == EXIT_SUCCESS ? "SUCCESS":"FAILURE");
+    }
+    return code;
 }
 }
 
-#if defined(NDEBUG) || 1
+#if defined(NDEBUG)
 #define CATCH_EXCEPTIONS
 #endif
 
@@ -274,7 +277,7 @@ auto main(int argc, char** argv) -> int
         return wolfpack::run_with_args(argc, argv);
 #ifdef CATCH_EXCEPTIONS
     } catch (std::exception& ex) {
-        std::cerr << "error: " << ex.what() << std::endl;
+        std::cerr << "wolfpack error: " << ex.what() << std::endl;
         return 1;
     }
 #endif

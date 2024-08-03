@@ -11,8 +11,8 @@ namespace wolfpack
         std::string command;
         std::string output;
 
-        operator int() const {
-            return code;
+        operator bool() const {
+            return code == EXIT_SUCCESS;
         }
     };
 

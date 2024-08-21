@@ -137,7 +137,7 @@ auto get_default_clone_dir() -> fs::path
     // wolfpack.json parsing
     std::stringstream config_stream;
     config_stream << std::ifstream(config_file).rdbuf();
-    nlohmann::json config_json = nlohmann::json::parse(config_stream);
+    auto config_json = nlohmann::json::parse(config_stream);
 
     struct LibRepo {
         std::string author;

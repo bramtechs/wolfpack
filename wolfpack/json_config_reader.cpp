@@ -1,16 +1,23 @@
-#include "config_reader.hpp"
+#include "json_config_reader.hpp"
 
-class JsonConfigReader : IConfigReader
+std::string JsonConfigReader::GetFileExtension() const
 {
-    std::string GetFileExtension() const override {
-        return "json";
-    };
-
-    std::optional<int> GetVersion() const override {
-        throw "todo";
-    };
-
-    ConfigsLibsMap GetLibrariesMap() const override {
-        throw "todo";
-    };
+    return "json";
 };
+
+std::optional<int> JsonConfigReader::GetVersion() const
+{
+    throw "todo";
+};
+
+ConfigLibsMap JsonConfigReader::GetLibrariesMap() const
+{
+    throw "todo";
+}
+
+bool JsonConfigReader::ContainsKey(const std::string& key) const
+{
+    throw "todo";
+}
+;
+

@@ -1,4 +1,4 @@
-name: "Build"
+name: "Nix build"
 on:
   push:
     branches: ["main"]

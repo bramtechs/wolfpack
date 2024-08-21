@@ -1,13 +1,10 @@
-{ pkgs ? import <nixpkgs> {} }:
-
+let
+  pkgs = import ./packages.nix;
+in
 with pkgs;
 
 mkShell
   {
-    stdenv = pkgs.llvmPackages_18.libcxxStdenv;
-
-    buildInputs = [
-      llvmPackages_18.clangUseLLVM
-      lldb
-    ];
+    stdenv = pkgs.stdenv;
+    nativeInputs = pkgs.inputs;
   }

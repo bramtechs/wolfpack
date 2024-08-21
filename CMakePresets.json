@@ -2,7 +2,7 @@
   "version": 8,
   "configurePresets": [
     {
-      "name": "default",
+      "name": "windows",
       "generator": "Visual Studio 17 2022",
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {

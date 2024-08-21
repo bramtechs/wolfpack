@@ -1,7 +1,5 @@
-let
-  pkgs = import ./packages.nix;
-in
-pkgs.stdenv.mkDerivation {
+let pkgs = import ./packages.nix;
+in pkgs.stdenv.mkDerivation {
   pname = "wolfpack";
   version = "0.0.1";
   src = ./.;
@@ -12,8 +10,7 @@ pkgs.stdenv.mkDerivation {
     cmake . \
     -DCMAKE_INSTALL_PREFIX=$out \
     -DCMAKE_BUILD_TYPE=Release \
-    -DDONT_FETCH_PKGS=ON \
-    -G Ninja
+    -DDONT_FETCH_PKGS=ON
   '';
 
   buildPhase = ''

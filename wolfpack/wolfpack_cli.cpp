@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <tl/expected.hpp>
 
+#include "json_config_reader.hpp"
 #include "utils.hpp"
 
 // TODO: switch to spdlog
@@ -134,6 +135,8 @@ auto get_default_clone_dir() -> fs::path
         throw WolfPackError(fmt::format("Failed to create output folder '{}'!", wolfpack_folder));
     }
 
+    //
+
     // wolfpack.json parsing
     std::stringstream config_stream;
     config_stream << std::ifstream(config_file).rdbuf();
@@ -141,7 +144,7 @@ auto get_default_clone_dir() -> fs::path
 
     struct LibRepo {
         std::string author;
-        std::string repo_name;        
+        std::string repo_name;
         std::string url;
         std::string tag = "master";
 
@@ -229,11 +232,11 @@ auto get_default_clone_dir() -> fs::path
 
         if (!run_command_logged(fmt::format("git -C {} checkout {}", repo_folder, lib.tag))) {
             std::cerr << fmt::format("Failed to checkout branch/tag {} in repo {}/{}, fetching tags again...\n", lib.tag, lib.author, lib.repo_name);
-            
+
             if (!run_command_logged(fmt::format("git -C {} fetch --tags", repo_folder))) {
                 return fmt::format("Failed to fetch repo tags of repo {}/{}", lib.author, lib.repo_name);
             }
-            
+
             if (!run_command_logged(fmt::format("git -C {} checkout {}", repo_folder, lib.tag))) {
                 return fmt::format("Failed to checkout branch/tag {} in repo {}/{}", lib.tag, lib.author, lib.repo_name);
             }
@@ -248,7 +251,7 @@ auto get_default_clone_dir() -> fs::path
         tasks.emplace_back(std::async(std::launch::async, SyncLibRepo, lib));
     }
 
-    bool tasksFailed = false;    
+    bool tasksFailed = false;
     for (auto i = 0; i < tasks.size(); i++) {
         tasks[i].wait();
         if (const std::string error = tasks[i].get(); !error.empty()) {

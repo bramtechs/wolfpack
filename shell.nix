@@ -1,5 +1,6 @@
 let pkgs = import ./packages.nix;
-in pkgs.mkShell {
+in with pkgs;
+pkgs.mkShell {
   stdenv = pkgs.stdenv;
-  nativeInputs = pkgs.inputs;
+  buildInputs = [ pkgs.git ] ++ pkgs.inputs;
 }

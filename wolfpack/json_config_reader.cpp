@@ -9,17 +9,18 @@ namespace wolfpack {
 
 std::string JsonConfigReader::GetFileExtension() const
 {
-    return "json"s;
+    return ".json"s;
 };
 
 std::optional<int> JsonConfigReader::GetVersion() const
 {
     if (json.contains("version"s)) {
         const auto& value = json.get("version"s);
-        if (!value.is<int>()) {
+        if (!value.is<double>()) {
             throw WolfPackError("Config 'version' must be a number."s);
         }
-        return value.get<int>();
+        // Retrieving the value as int causes linking error.
+        return static_cast<int>(value.get<double>());
     }
     return std::nullopt;
 };

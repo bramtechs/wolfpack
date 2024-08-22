@@ -8,6 +8,7 @@
 #include <ostream>
 #include <sstream>
 #include <stdexcept>
+#include <forward_list>
 #include <tl/expected.hpp>
 
 #include "config_reader.hpp"
@@ -73,6 +74,59 @@ namespace wolfpack {
         throw WolfPackError(fmt::format("Unexpected IO error: {}\n", result.error()));
     };
 
+    struct LibRepo {
+        std::string author;
+        std::string repo_name;
+        std::string url;
+        std::string tag = "master";
+
+        LibRepo(const std::string& name, const std::optional<std::string>& customUrl)
+        {
+            // parse name
+            if (name.empty()) {
+                throw WolfPackError("Library name cannot be empty!");
+            }
+            const size_t slash = name.find('/');
+            if (slash == std::string::npos || name.starts_with('/') || name.ends_with('/')) {
+                throw WolfPackError(fmt::format("Library name '{}' does not have <author>/<repo_name> format!", name));
+            }
+
+            this->author = name.substr(0, slash);
+            this->repo_name = name.substr(slash + 1);
+            this->url = customUrl.value_or(fmt::format("https://github.com/{}/{}", author, repo_name));
+        }
+    };
+
+    auto read_libs_from_config(const std::filesystem::path& path) -> std::forward_list<LibRepo> 
+    {
+        //
+        const auto config_readers = ConfigReaders()
+                                         .With<JsonConfigReader>();
+        const auto config_reader = config_readers.ReadFile(path);
+
+        std::forward_list<LibRepo> libs;
+
+        if (!config_reader->ContainsKey("libs")) {
+            throw WolfPackError("No libs key found");
+        }
+
+        for (auto& [name, options] : config_reader->GetLibrariesMap()) {
+            std::optional<std::string> url {};
+            if (options.contains("url")) {
+                url = options["url"];
+            }
+            LibRepo lib(name, url);
+            if (options.contains("tag")) {
+                lib.tag = options["tag"];
+            }
+            libs.emplace_front(lib);
+
+            vout << fmt::format("Will process library {} with tag '{}'...\n", name, lib.tag);
+        }
+
+        return libs;
+    }
+
     auto get_default_clone_dir() -> fs::path
     {
         const auto home_dir = std::getenv("HOME");
@@ -89,12 +143,25 @@ namespace wolfpack {
         options.add_options() //
             ("pull", "Pull/update existing repos") //
             ("v,verbose", "Print more info") //
+            ("check-config", "Check config for errors and do nothing.", cxxopts::value<fs::path>()->default_value("")) //
             ("h,help", "Print usage");
 
         const auto result = options.parse(argc, argv);
 
         if (result.count("help")) {
             std::cout << options.help() << std::endl;
+            return 0;
+        }
+
+        const auto& checked_config_path = result["check-config"].as<fs::path>();
+        if (!checked_config_path.empty()) {
+            auto count = 0;
+            for (const auto& lib : read_libs_from_config(checked_config_path)) {
+                std::cout << "Library: " << lib.author << " / " << lib.repo_name << "\n"
+                          << "-- tag: " << lib.tag << "\n-- url: " << lib.url << '\n';
+                count++;
+            }
+            std::cout << "\nFound " << count << " defined libraries in config file.\n";
             return 0;
         }
 
@@ -144,54 +211,7 @@ namespace wolfpack {
             throw WolfPackError(fmt::format("Failed to create output folder '{}'!", wolfpack_folder));
         }
 
-        //
-        const auto& config_readers = ConfigReaders()
-            .With<JsonConfigReader>();
-        IConfigReader* config_reader = config_readers.ReadFile(config_file);
-
-        struct LibRepo {
-            std::string author;
-            std::string repo_name;
-            std::string url;
-            std::string tag = "master";
-
-            LibRepo(const std::string& name, const std::optional<std::string>& customUrl)
-            {
-                // parse name
-                if (name.empty()) {
-                    throw WolfPackError("Library name cannot be empty!");
-                }
-                const size_t slash = name.find('/');
-                if (slash == std::string::npos || name.starts_with('/') || name.ends_with('/')) {
-                    throw WolfPackError(fmt::format("Library name '{}' does not have <author>/<repo_name> format!", name));
-                }
-
-                this->author = name.substr(0, slash);
-                this->repo_name = name.substr(slash + 1);
-                this->url = customUrl.value_or(fmt::format("https://github.com/{}/{}", author, repo_name));
-            }
-        };
-
-        std::vector<LibRepo> libs{};
-        libs.reserve(100);
-
-        if (!config_reader->ContainsKey("libs")) {
-            throw WolfPackError("No libs key found");
-        }
-
-        for (auto& [name, options] : config_reader->GetLibrariesMap()) {
-            std::optional<std::string> url{};
-            if (options.contains("url")) {
-                url = options["url"];
-            }
-            LibRepo lib(name, url);
-            if (options.contains("tag")) {
-                lib.tag = options["tag"];
-            }
-            libs.emplace_back(lib);
-
-            vout << fmt::format("Will process library {} with tag '{}'...\n", name, lib.tag);
-        }
+        const auto libs = read_libs_from_config(config_file);
 
         if (!run_command_logged("git --version")) {
             throw WolfPackError("Git is not installed! It is required.");

@@ -6,11 +6,12 @@
 #include <filesystem>
 #include <memory>
 
-using ConfigLibsMap = std::unordered_map<std::string,
-                                         std::unordered_map<std::string, std::string>>;
+namespace wolfpack {
 
-class IConfigReader
-{
+using ConfigLibsMap = std::unordered_map<std::string,
+    std::unordered_map<std::string, std::string>>;
+
+class IConfigReader {
 public:
     virtual ~IConfigReader() = default;
 
@@ -25,18 +26,21 @@ public:
     virtual void Parse(const std::string& content) = 0;
 };
 
-class ConfigReaders
-{
+class ConfigReaders {
 public:
     template <typename T>
-    ConfigReaders& With() {
-        auto r = std::unique_ptr<IConfigReader>(new T());
+    ConfigReaders& With()
+    {
+        const auto r = std::make_shared<T>();
         const auto ext = r->GetFileExtension();
-        readers[ext] = std::move(r);
+        readers.emplace(ext, r);
         return *this;
     }
 
-    IConfigReader* ReadFile(const std::filesystem::path& path) const;
+    std::shared_ptr<IConfigReader> ReadFile(const std::filesystem::path& path) const;
+
 private:
-    std::unordered_map<std::string, std::unique_ptr<IConfigReader>> readers {};
+    std::unordered_map<std::string, std::shared_ptr<IConfigReader>> readers {};
 };
+
+}

@@ -1,13 +1,19 @@
-./install.ps1
+#!/usr/bin/env bash
+set -e
+sh install
 
-Push-Location tests/01
+pushd $(dirname $0)
+
+pushd tests/01
 ../../bin/wolfpack --verbose
 cmake --preset example
 cmake --build build --parallel
-Pop-Location
+popd
 
-Push-Location tests/02
+pushd tests/02
 ../../bin/wolfpack --verbose
 cmake --preset example
 cmake --build build --parallel
-Pop-Location
+popd
+
+popd

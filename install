@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -e
+
+pushd $(dirname $0)
+
+cmake --preset windows -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$(dirname $0)
+cmake --build build --parallel --target install
+
+popd

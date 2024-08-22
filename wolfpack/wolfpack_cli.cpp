@@ -143,7 +143,7 @@ namespace wolfpack {
         options.add_options() //
             ("pull", "Pull/update existing repos") //
             ("v,verbose", "Print more info") //
-            ("check-config", "Check config for errors and do nothing.", cxxopts::value<fs::path>()->default_value("")) //
+            ("check-config", "Check config for errors and do nothing.", cxxopts::value<std::string>()->default_value("")) //
             ("h,help", "Print usage");
 
         const auto result = options.parse(argc, argv);
@@ -153,7 +153,7 @@ namespace wolfpack {
             return 0;
         }
 
-        const auto& checked_config_path = result["check-config"].as<fs::path>();
+        const auto& checked_config_path = result["check-config"].as<std::string>();
         if (!checked_config_path.empty()) {
             auto count = 0;
             for (const auto& lib : read_libs_from_config(checked_config_path)) {
@@ -292,7 +292,7 @@ namespace wolfpack {
     }
 }
 
-#if defined(NDEBUG)
+#if defined(NDEBUG) || 1
 #define CATCH_EXCEPTIONS
 #endif
 

@@ -11,7 +11,8 @@ IConfigReader* ConfigReaders::ReadFile(const std::filesystem::path& path) const
         std::stringstream config_stream;
         config_stream << std::ifstream(path).rdbuf();
         const auto ext = path.extension().string();
-        return readers.at(ext).get();
+        auto reader = readers.at(ext).get();
+        reader->Parse(config_stream.rdbuf()->str());
     } catch (std::out_of_range& ex) {
         throw WolfPackError(fmt::format("Failed to create reader for file type: {}", path.extension().string()));
     } catch (std::exception& ex) {

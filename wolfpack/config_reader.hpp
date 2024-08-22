@@ -21,6 +21,8 @@ public:
     virtual bool ContainsKey(const std::string& key) const = 0;
 
     virtual ConfigLibsMap GetLibrariesMap() const = 0;
+
+    virtual void Parse(const std::string& content) = 0;
 };
 
 class ConfigReaders

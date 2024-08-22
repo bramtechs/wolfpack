@@ -1,10 +1,13 @@
 #pragma once
+
 #include <string>
 #include <future>
 #include <tl/expected.hpp>
 
 namespace wolfpack
 {
+    using WolfPackError = std::runtime_error;
+
     struct CommandResult
     {
         int code;

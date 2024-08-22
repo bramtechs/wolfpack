@@ -29,7 +29,6 @@ public:
 
 namespace wolfpack {
     namespace fs = std::filesystem;
-    using WolfPackError = std::runtime_error;
 
     using namespace std::chrono_literals;
     using namespace std::string_literals;

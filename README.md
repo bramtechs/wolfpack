@@ -30,7 +30,7 @@ Create a `wolfpack.json` file next to your project's CMakeLists.txt.
 
 By default, dependencies are pulled from Github. You can specify the repo address explicitly.
 
-```
+```json
 {
   "version": 1,
   "libs": {
@@ -76,4 +76,3 @@ wolfpack --pull && cmake ...
 
 - Source builds of dependencies only
 - Dependencies must use CMake.
-- Repos must be hosted on Github. **TODO: allow any git address**

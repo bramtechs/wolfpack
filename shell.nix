@@ -1,6 +1,10 @@
-let pkgs = import ./packages.nix;
-in with pkgs;
+let
+  pkgs = import ./packages.nix;
+  wolfpack = import ./.;
+in
+with pkgs.pkgs;
 pkgs.mkShell {
   stdenv = pkgs.stdenv;
-  buildInputs = [ pkgs.git ] ++ pkgs.inputs;
+  nativeBuildInputs = with pkgs; [ git ] ++ pkgs.inputs;
+  buildInputs = [ wolfpack ];
 }

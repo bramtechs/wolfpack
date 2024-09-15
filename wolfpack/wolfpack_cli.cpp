@@ -1,4 +1,5 @@
 #include <chrono>
+#include <cassert>
 #include <filesystem>
 #include <fmt/format.h>
 #include <fstream>
@@ -86,8 +87,9 @@ auto get_default_clone_dir() -> fs::path
     cxxopts::Options options("wolfpack", "Wolfpack downloader and synchronizer");
 
     options.add_options() //
-        ("pull", "Pull/update existing repos") //
-        ("v,verbose", "Print more info") //
+        ("pull", "Pull/update existing repos", cxxopts::value<bool>()->default_value("false")) //
+        ("sequential", "Run all commands queued (more stable)", cxxopts::value<bool>()->default_value("false")) //
+        ("v,verbose", "Print more info", cxxopts::value<bool>()->default_value("false")) //
         ("h,help", "Print usage");
 
     const auto result = options.parse(argc, argv);
@@ -102,6 +104,7 @@ auto get_default_clone_dir() -> fs::path
     const auto wolfpack_folder = project_folder / ".wolfpack";
 
     const auto should_pull = result["pull"].as<bool>();
+    const auto sequential = result["sequential"].as<bool>();
 
 #ifdef NDEBUG
     const auto verbose = result["verbose"].as<bool>();
@@ -215,42 +218,41 @@ auto get_default_clone_dir() -> fs::path
                 return fmt::format("Failed to fetch repo tags of repo {}/{}", lib.author, lib.repo_name);
             }
         } else {
-            if (should_pull) {
+			if (should_pull) {
 
-                if (!run_command_logged(fmt::format("git -C {} config pull.rebase false", repo_folder))) {
-                    return fmt::format("Failed to set config option for repo {}/{}", lib.author, lib.repo_name);
-                }
+				if (!run_command_logged(fmt::format("git -C {} config pull.rebase false", repo_folder))) {
+					return fmt::format("Failed to set config option for repo {}/{}", lib.author, lib.repo_name);
+				}
 
-                if (!run_command_logged(fmt::format("git -C {} pull", repo_folder))) {
-                    return fmt::format("Failed to pull repo {}/{}", lib.author, lib.repo_name);
-                }
-            }
-        }
+				if (!run_command_logged(fmt::format("git -C {} pull", repo_folder))) {
+					return fmt::format("Failed to pull repo {}/{}", lib.author, lib.repo_name);
+				}
+			}
+		}
 
-        if (!run_command_logged(fmt::format("git -C {} checkout {}", repo_folder, lib.tag))) {
-            std::cerr << fmt::format("Failed to checkout branch/tag {} in repo {}/{}, fetching tags again...\n", lib.tag, lib.author, lib.repo_name);
+		if (!run_command_logged(fmt::format("git -C {} checkout {}", repo_folder, lib.tag))) {
+			std::cerr << fmt::format("Failed to checkout branch/tag {} in repo {}/{}, fetching tags again...\n", lib.tag, lib.author, lib.repo_name);
 
-            if (!run_command_logged(fmt::format("git -C {} fetch --tags", repo_folder))) {
-                return fmt::format("Failed to fetch repo tags of repo {}/{}", lib.author, lib.repo_name);
-            }
+			if (!run_command_logged(fmt::format("git -C {} fetch --tags", repo_folder))) {
+				return fmt::format("Failed to fetch repo tags of repo {}/{}", lib.author, lib.repo_name);
+			}
 
-            if (!run_command_logged(fmt::format("git -C {} checkout {}", repo_folder, lib.tag))) {
-                return fmt::format("Failed to checkout branch/tag {} in repo {}/{}", lib.tag, lib.author, lib.repo_name);
-            }
-        }
+			if (!run_command_logged(fmt::format("git -C {} checkout {}", repo_folder, lib.tag))) {
+				return fmt::format("Failed to checkout branch/tag {} in repo {}/{}", lib.tag, lib.author, lib.repo_name);
+			}
+		}
 
-        // TODO:
-        return ""s; // no errors occured :)
-    };
+		// TODO:
+		return ""s; // no errors occured :)
+	};
 
     std::vector<std::future<std::string>> tasks {};
     for (const auto& lib : libs) {
-        tasks.emplace_back(std::async(std::launch::async, SyncLibRepo, lib));
+        tasks.emplace_back(std::async(sequential ? std::launch::deferred:std::launch::async, SyncLibRepo, lib));
     }
 
     bool tasksFailed = false;
     for (auto i = 0; i < tasks.size(); i++) {
-        tasks[i].wait();
         if (const std::string error = tasks[i].get(); !error.empty()) {
             std::cerr << fmt::format("Task failed with error: {}\n", error);
             tasksFailed = true;
